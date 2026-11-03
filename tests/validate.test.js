@@ -47,6 +47,35 @@ test('validateUrl 阻断 javascript: 伪协议', () => {
   assert.equal(validateUrl('JaVaScRiPt:alert(1)').ok, false);
 });
 
+test('validateUrl 阻断 data:/vbscript: 伪协议', () => {
+  assert.equal(validateUrl('data:text/html,<script>alert(1)</script>').ok, false);
+  assert.equal(validateUrl('DATA:text/html;base64,PHNjcmlwdD4=').ok, false);
+  assert.equal(validateUrl('vbscript:msgbox(1)').ok, false);
+});
+
+test('validateUrl 阻断协议相对地址（跨站跳转）', () => {
+  assert.equal(validateUrl('//evil.com').ok, false);
+  assert.equal(validateUrl('//evil.com/x').ok, false);
+});
+
+test('validateUrl 阻断反斜杠技巧（浏览器把 \\ 视作 /）', () => {
+  assert.equal(validateUrl('/\\evil.com').ok, false);
+  assert.equal(validateUrl('\\/evil.com').ok, false);
+  assert.equal(validateUrl('\\\\evil.com').ok, false);
+});
+
+test('validateUrl 超长输入显式拒绝而非截断', () => {
+  const long = 'https://example.com/' + 'a'.repeat(2048);
+  const r = validateUrl(long);
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /2048/);
+});
+
+test('validateUrl 拒绝含空白的 http URL', () => {
+  assert.equal(validateUrl('https://example.com/a b').ok, false);
+  assert.equal(validateUrl('https://evil.com\n/x').ok, false);
+});
+
 test('validateUrl 允许 https 与相对路径', () => {
   assert.equal(validateUrl('https://example.com/a').ok, true);
   assert.equal(validateUrl('/dashboard/main').ok, true);

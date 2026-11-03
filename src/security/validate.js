@@ -40,12 +40,19 @@ export function validateMessage(input) {
 }
 
 /**
- * URL 校验：仅允许 http/https 相对路径，阻断 javascript: 等伪协议。
+ * URL 校验：仅允许 http/https 绝对地址与站内相对路径。
+ * 阻断：javascript:/data: 等伪协议、协议相对地址（//evil.com）、
+ * 反斜杠技巧（/\evil.com —— 浏览器把 \ 视作 /，实为跨站）、
+ * 含空白的 URL、超长输入（显式拒绝而非截断，避免截断改变语义）。
  * @param {string} input
  * @returns {{ok: boolean, value?: string, reason?: string}}
  */
 export function validateUrl(input) {
-  const s = sanitizeText(input, 2048).trim();
-  if (/^(https?:\/\/|\/)/i.test(s)) return { ok: true, value: s };
+  if (typeof input !== 'string') return { ok: false, reason: '仅允许 http(s) 或站内相对路径' };
+  const trimmed = input.trim();
+  if (trimmed.length > 2048) return { ok: false, reason: 'URL 超过 2048 字符上限' };
+  const s = sanitizeText(trimmed, 2048);
+  if (/^https?:\/\/\S*$/i.test(s)) return { ok: true, value: s };
+  if (s.startsWith('/') && !s.startsWith('//') && !s.includes('\\')) return { ok: true, value: s };
   return { ok: false, reason: '仅允许 http(s) 或站内相对路径' };
 }
