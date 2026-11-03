@@ -1,13 +1,22 @@
 import { createEl, clearChildren } from './security/dom.js';
 import { validateMessage } from './security/validate.js';
+import { createListenerTracker } from './security/listeners.js';
 
 /**
  * 星社仪表盘入口。
  * 演示安全基线：用户输入永远经 textContent 渲染，绝不走 innerHTML。
+ * 所有监听器统一经 tracker 登记，页面卸载时 removeAll 防内存泄漏。
  */
+
+/** @type {ReturnType<typeof createListenerTracker> | null} */
+let pageTracker = null;
+
 function bootstrap() {
   const app = document.getElementById('app');
   if (!app) return;
+
+  // 页面级监听器注册表：卸载页面（SPA 路由切换等）时统一解除
+  pageTracker = createListenerTracker();
 
   const panel = createEl('section', { class: 'panel' });
   panel.appendChild(createEl('h2', {}, '留言板（安全渲染演示）'));
@@ -18,7 +27,7 @@ function bootstrap() {
   });
   const btn = createEl('button', { type: 'button' }, '发送');
 
-  btn.addEventListener('click', () => {
+  pageTracker.add(btn, 'click', () => {
     const result = validateMessage(input.value);
     if (!result.ok) {
       renderNotice(panel, result.reason);
@@ -50,3 +59,8 @@ if (document.readyState === 'loading') {
 } else {
   bootstrap();
 }
+
+// 页面卸载时统一解除所有监听器，防止 detached 节点泄漏
+window.addEventListener('pagehide', () => {
+  pageTracker?.removeAll();
+}, { once: true });
