@@ -21,6 +21,6 @@ npm run build    # 构建
 
 ## 后续（修复 → 深化）
 
-- [ ] 接入真实数据源后补充 `connect-src` 白名单
+- [ ] 接入真实数据源：在 `src/security/csp.js` 的 `API_ORIGINS` 追加精确 origin（scheme://host[:port]），并同步 `index.html` meta CSP——`tests/csp.test.js` 强制两者逐字一致，禁止通配符 / `unsafe-*` / 裸域名
 - [ ] 引入 DOMPurify 作为富文本场景兜底（当前纯文本场景不依赖）
 - [ ] 增加内存泄漏回归测试（监听器计数 / Detached DOM）

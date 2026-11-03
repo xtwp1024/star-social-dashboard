@@ -80,3 +80,72 @@ test('validateUrl 允许 https 与相对路径', () => {
   assert.equal(validateUrl('https://example.com/a').ok, true);
   assert.equal(validateUrl('/dashboard/main').ok, true);
 });
+
+// ---- data: 伪协议边界变体（sanitize 剥离/保留字符后仍必须拒绝）----
+
+test('validateUrl 阻断内嵌控制字符后还原为 data: 的输入', () => {
+  // \u0000/\u000B 会被剥离，剥完恰好拼回 data: —— 结果仍须拒绝
+  assert.equal(validateUrl('da\u0000ta:text/html,<b>x</b>').ok, false);
+  assert.equal(validateUrl('d\u000Bata:text/html').ok, false);
+  assert.equal(validateUrl('\u0001data:text/html;base64,AAAA').ok, false);
+});
+
+test('validateUrl 阻断内嵌 tab/换行的伪协议（这些字符不被剥离）', () => {
+  assert.equal(validateUrl('java\tscript:alert(1)').ok, false);
+  assert.equal(validateUrl('da\tta:text/html').ok, false);
+  assert.equal(validateUrl('data\r:\u0009text/html').ok, false);
+});
+
+test('validateUrl 阻断空白包裹与混合大小写的 data: 变体', () => {
+  assert.equal(validateUrl('  data:text/html,<b>x</b>  ').ok, false);
+  assert.equal(validateUrl('\nData: text/html').ok, false);
+  assert.equal(validateUrl('DaTa:TeXt/HTML').ok, false);
+});
+
+test('validateUrl 阻断 data: 混入 query 的直接伪协议头', () => {
+  // 伪协议伪装成带 query 的形态：仍不满足 http(s) 或相对路径白名单
+  assert.equal(validateUrl('data:text/html;charset=utf-8,<script>y</script>?x=1').ok, false);
+});
+
+// ---- 超长输入边界 ----
+
+test('validateUrl 2048 字符恰好通过（上边界含端点）', () => {
+  const exact = 'https://a.com/' + 'a'.repeat(2048 - 'https://a.com/'.length);
+  assert.equal(exact.length, 2048);
+  const r = validateUrl(exact);
+  assert.equal(r.ok, true);
+  assert.equal(r.value, exact); // 恰好在上限内：原文通过，不发生截断
+});
+
+test('validateUrl 2049 字符拒绝（上边界外）', () => {
+  const over = 'https://a.com/' + 'a'.repeat(2049 - 'https://a.com/'.length);
+  const r = validateUrl(over);
+  assert.equal(r.ok, false);
+  assert.match(r.reason, /2048/);
+});
+
+test('validateUrl 拒绝后不返回 value（防误用未校验返回值）', () => {
+  const r = validateUrl('javascript:alert(1)');
+  assert.equal(r.ok, false);
+  assert.equal('value' in r, false);
+});
+
+// ---- 类型与空值边界 ----
+
+test('validateUrl 拒绝非字符串与空输入', () => {
+  assert.equal(validateUrl(null).ok, false);
+  assert.equal(validateUrl(undefined).ok, false);
+  assert.equal(validateUrl(123).ok, false);
+  assert.equal(validateUrl({}).ok, false);
+  assert.equal(validateUrl('').ok, false);
+  assert.equal(validateUrl('   ').ok, false);
+});
+
+test('validateUrl 仅放行以 / 开头的相对路径', () => {
+  assert.equal(validateUrl('/').ok, true);
+  assert.equal(validateUrl('/a/b?x=1').ok, true);
+  // 不以 / 开头的相对名与 ./ ../ 形态不进白名单，防止未来语义漂移
+  assert.equal(validateUrl('index.html').ok, false);
+  assert.equal(validateUrl('./a').ok, false);
+  assert.equal(validateUrl('../a').ok, false);
+});
