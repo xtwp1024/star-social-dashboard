@@ -4,6 +4,8 @@
  * 禁止 innerHTML / insertAdjacentHTML / document.write。
  */
 
+import { validateUrl } from './validate.js';
+
 /**
  * 创建元素并安全填充文本内容。
  * @param {string} tag 合法 HTML 标签名
@@ -22,8 +24,12 @@ export function createEl(tag, attrs = {}, text = '') {
   ]);
   for (const [key, value] of Object.entries(attrs)) {
     if (!ALLOWED_ATTRS.has(key)) continue;
-    // 阻断 javascript: / data: 伪协议注入（href/src 类属性）
-    if ((key === 'href' || key === 'src') && /^\s*(javascript|data(?!:image\/))/i.test(String(value))) {
+    // href/src 统一走 validateUrl 白名单（仅 http(s) 与站内相对路径），
+    // 阻断 javascript:/vbscript:/data: 等全部伪协议与协议相对/反斜杠技巧。
+    if (key === 'href' || key === 'src') {
+      const check = validateUrl(String(value));
+      if (!check.ok) continue;
+      el.setAttribute(key, check.value);
       continue;
     }
     el.setAttribute(key, String(value));

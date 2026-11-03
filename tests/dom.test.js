@@ -50,6 +50,31 @@ test('createEl 阻断 javascript: 伪协议 href', async () => {
   assert.equal(el.attrs.href, undefined);
 });
 
+test('createEl href/src 统一走 validateUrl 白名单（伪协议/协议相对/反斜杠全拒）', async () => {
+  const { createEl } = await import('../src/security/dom.js');
+  const bad = [
+    'vbscript:msgbox(1)',            // 旧正则漏掉的伪协议
+    'data:text/html,<script>',       // data: 伪协议（含旧版放行的 image 分支一律收紧）
+    'data:image/png;base64,AAAA',    // data:image 也不再放行
+    '//evil.com',                    // 协议相对，实为跳外站
+    '/\\evil.com',                   // 反斜杠技巧
+    '  javascript:alert(1)',         // 前导空白绕过尝试
+  ];
+  for (const url of bad) {
+    const a = createEl('a', { href: url });
+    assert.equal(a.attrs.href, undefined, `href 应拒绝: ${url}`);
+    const img = createEl('img', { src: url });
+    assert.equal(img.attrs.src, undefined, `src 应拒绝: ${url}`);
+  }
+});
+
+test('createEl 合法 http(s) 与站内相对路径 href/src 放行', async () => {
+  const { createEl } = await import('../src/security/dom.js');
+  assert.equal(createEl('a', { href: 'https://example.com/x' }).attrs.href, 'https://example.com/x');
+  assert.equal(createEl('a', { href: '/feed/latest' }).attrs.href, '/feed/latest');
+  assert.equal(createEl('img', { src: '/assets/logo.png' }).attrs.src, '/assets/logo.png');
+});
+
 test('clearChildren 清空容器', async () => {
   const { createEl, clearChildren } = await import('../src/security/dom.js');
   const box = createEl('ul');
