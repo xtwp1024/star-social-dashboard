@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 内容安全策略：禁止内联脚本与外部源，作为 XSS 纵深防御 -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'" />
+  <title>星社仪表盘</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>星社仪表盘</h1>
+    <span class="badge">安全基线 v0.1</span>
+  </header>
+  <main id="app"></main>
+  <noscript>需要启用 JavaScript 才能使用仪表盘。</noscript>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
