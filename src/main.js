@@ -91,14 +91,37 @@ function renderEmptyState(feed) {
   feed.appendChild(createEl('li', { class: 'feed-empty' }, '暂无内容，来发第一条吧'));
 }
 
+function clearErrorState(feed) {
+  const e = feed.querySelector('.feed-error');
+  if (e) e.remove();
+}
+
+/**
+ * 加载失败且列表为空时的错误态：原因说明 + 重试按钮（点击后清除自身并重发请求）。
+ * 重试按钮监听器同样经 tracker 登记，保持「所有监听器统一登记」的约定。
+ */
+function renderErrorState(feed, tracker, retry) {
+  if (feed.querySelector('.feed-error')) return;
+  const item = createEl('li', { class: 'feed-error' });
+  item.appendChild(createEl('span', { class: 'feed-error-text' }, '加载失败，网络或数据源异常'));
+  const retryBtn = createEl('button', { type: 'button', class: 'feed-retry' }, '重试');
+  tracker.add(retryBtn, 'click', () => {
+    clearErrorState(feed);
+    retry();
+  });
+  item.appendChild(retryBtn);
+  feed.appendChild(item);
+}
+
 /**
  * 拉取一页帖子并渲染。出错时展示 notice，不静默吞掉。
  * @param {ReturnType<typeof createFeedApi>} api
  * @param {HTMLElement} feed
  * @param {HTMLElement} panel
  * @param {HTMLButtonElement} loadMoreBtn
+ * @param {ReturnType<typeof createListenerTracker>} tracker
  */
-async function loadPage(api, feed, panel, loadMoreBtn) {
+async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
   if (feedState.loading || !feedState.hasMore) return;
   feedState.loading = true;
   loadMoreBtn.disabled = true;
@@ -106,6 +129,7 @@ async function loadPage(api, feed, panel, loadMoreBtn) {
   try {
     const page = await api.fetchPosts({ limit: 10, cursor: feedState.nextCursor });
     clearEmptyState(feed);
+    clearErrorState(feed);
     for (const post of page.posts) renderPost(feed, post);
     feedState.nextCursor = page.nextCursor;
     feedState.hasMore = page.hasMore;
@@ -114,7 +138,13 @@ async function loadPage(api, feed, panel, loadMoreBtn) {
     }
     clearNotice(panel);
   } catch {
-    renderNotice(panel, '加载失败，请稍后重试');
+    // 列表已有内容（翻页失败）→ 顶部 notice 提示即可，保留已渲染数据；
+    // 列表为空（首屏失败）→ 列表区错误态 + 重试按钮，避免用户面对空白无反馈
+    if (feed.querySelectorAll('.feed-item').length === 0) {
+      renderErrorState(feed, tracker, () => loadPage(api, feed, panel, loadMoreBtn, tracker));
+    } else {
+      renderNotice(panel, '加载失败，请稍后重试');
+    }
   } finally {
     feedState.loading = false;
     loadMoreBtn.disabled = false;
@@ -137,7 +167,7 @@ function bootstrap() {
   const loadMoreBtn = createEl('button', { type: 'button', class: 'load-more' }, '加载更多');
   loadMoreBtn.hidden = true;
   pageTracker.add(loadMoreBtn, 'click', () => {
-    loadPage(api, feed, panel, loadMoreBtn);
+    loadPage(api, feed, panel, loadMoreBtn, pageTracker);
   });
 
   const input = createEl('input', {
@@ -172,7 +202,7 @@ function bootstrap() {
   app.appendChild(panel);
 
   // 首屏数据
-  loadPage(api, feed, panel, loadMoreBtn);
+  loadPage(api, feed, panel, loadMoreBtn, pageTracker);
 }
 
 if (document.readyState === 'loading') {
