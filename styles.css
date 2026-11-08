@@ -68,6 +68,15 @@ main { padding: 24px; }
   margin: 0 0 12px;
 }
 
+.feed-empty {
+  padding: 16px 12px;
+  font-size: 13px;
+  color: #6b7280;
+  text-align: center;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+}
+
 .panel input {
   width: 70%;
   padding: 8px 10px;

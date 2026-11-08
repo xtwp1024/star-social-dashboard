@@ -65,6 +65,16 @@ function clearNotice(panel) {
   if (n) n.remove();
 }
 
+function clearEmptyState(feed) {
+  const e = feed.querySelector('.feed-empty');
+  if (e) e.remove();
+}
+
+function renderEmptyState(feed) {
+  if (feed.querySelector('.feed-empty')) return;
+  feed.appendChild(createEl('li', { class: 'feed-empty' }, '暂无内容，来发第一条吧'));
+}
+
 /**
  * 拉取一页帖子并渲染。出错时展示 notice，不静默吞掉。
  * @param {ReturnType<typeof createFeedApi>} api
@@ -79,9 +89,13 @@ async function loadPage(api, feed, panel, loadMoreBtn) {
   loadMoreBtn.textContent = '加载中…';
   try {
     const page = await api.fetchPosts({ limit: 10, cursor: feedState.nextCursor });
+    clearEmptyState(feed);
     for (const post of page.posts) renderPost(feed, post);
     feedState.nextCursor = page.nextCursor;
     feedState.hasMore = page.hasMore;
+    if (feed.querySelectorAll('.feed-item').length === 0 && !page.hasMore) {
+      renderEmptyState(feed);
+    }
     clearNotice(panel);
   } catch {
     renderNotice(panel, '加载失败，请稍后重试');
@@ -126,6 +140,7 @@ function bootstrap() {
       const post = await api.postMessage({ text: result.value });
       clearNotice(panel);
       input.value = '';
+      clearEmptyState(feed);
       renderPost(feed, post, true);
     } catch {
       renderNotice(panel, '发送失败，请重试');

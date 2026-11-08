@@ -63,6 +63,32 @@ test('createFeedApi：adapter 缺契约时快速失败', () => {
   assert.throws(() => createFeedApi({}), TypeError);
 });
 
+test('createFeedApi：fetchPosts 返回畸形结构时快速失败', async () => {
+  const badPages = [
+    null,
+    undefined,
+    {},                                   // 缺全部字段
+    { posts: 'not-array', hasMore: false, nextCursor: null },
+    { posts: [], hasMore: 'yes', nextCursor: null },   // hasMore 非布尔
+    { posts: [], hasMore: true, nextCursor: '' },      // 空串 cursor
+    { posts: [null], hasMore: false, nextCursor: null },
+    { posts: [{ text: '缺 id' }], hasMore: false, nextCursor: null },
+    { posts: [{ id: 'x', text: 42 }], hasMore: false, nextCursor: null },
+  ];
+  for (const page of badPages) {
+    const api = createFeedApi({ adapter: { fetchPosts: async () => page, postMessage: async () => ({ id: 'x', text: 't', createdAt: 'now' }) } });
+    await assert.rejects(() => api.fetchPosts(), TypeError);
+  }
+});
+
+test('createFeedApi：postMessage 返回畸形结构时快速失败', async () => {
+  const badPosts = [null, {}, { id: '', text: 't', createdAt: 'now' }, { id: 'x', createdAt: 'now' }, { id: 'x', text: 't' }];
+  for (const post of badPosts) {
+    const api = createFeedApi({ adapter: { fetchPosts: async () => ({ posts: [], hasMore: false, nextCursor: null }), postMessage: async () => post } });
+    await assert.rejects(() => api.postMessage({ text: 'hi' }), TypeError);
+  }
+});
+
 test('createFeedApi：尊重自定义适配器（真实数据源替换点）', async () => {
   const calls = [];
   const custom = {

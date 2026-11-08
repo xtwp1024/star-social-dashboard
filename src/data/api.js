@@ -63,6 +63,37 @@ export function createMockAdapter({ seedPosts = [], latencyMs = 0 } = {}) {
 }
 
 /**
+ * 响应契约校验：适配器返回畸形数据时快速失败，
+ * 避免 UI 层拿到非法结构后静默乱渲染（与 adapter 方法级校验同一哲学）。
+ */
+function assertPageShape(page) {
+  const ok =
+    page !== null && typeof page === 'object' &&
+    Array.isArray(page.posts) &&
+    typeof page.hasMore === 'boolean' &&
+    (page.nextCursor === null || (typeof page.nextCursor === 'string' && page.nextCursor.length > 0)) &&
+    page.posts.every(
+      (p) => p !== null && typeof p === 'object' &&
+        typeof p.id === 'string' && p.id.length > 0 &&
+        typeof p.text === 'string'
+    );
+  if (!ok) {
+    throw new TypeError('fetchPosts 返回结构不满足契约 { posts: Post[], nextCursor: string|null, hasMore: boolean }');
+  }
+}
+
+function assertPostShape(post) {
+  const ok =
+    post !== null && typeof post === 'object' &&
+    typeof post.id === 'string' && post.id.length > 0 &&
+    typeof post.text === 'string' &&
+    typeof post.createdAt === 'string' && post.createdAt.length > 0;
+  if (!ok) {
+    throw new TypeError('postMessage 返回结构不满足契约 Post { id, text, author, createdAt }');
+  }
+}
+
+/**
  * 创建 feed API。adapter 不满足契约时立即抛错（快速失败，避免静默降级）。
  * @param {{ adapter: { fetchPosts: Function, postMessage: Function } }} options
  */
@@ -71,7 +102,15 @@ export function createFeedApi({ adapter }) {
     throw new TypeError('adapter 必须实现 fetchPosts 与 postMessage');
   }
   return {
-    fetchPosts: (options) => adapter.fetchPosts(options),
-    postMessage: (payload) => adapter.postMessage(payload),
+    async fetchPosts(options) {
+      const page = await adapter.fetchPosts(options);
+      assertPageShape(page);
+      return page;
+    },
+    async postMessage(payload) {
+      const post = await adapter.postMessage(payload);
+      assertPostShape(post);
+      return post;
+    },
   };
 }
