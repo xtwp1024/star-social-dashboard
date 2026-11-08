@@ -52,6 +52,22 @@ main { padding: 24px; }
   word-break: break-all;
 }
 
+.feed-meta {
+  display: block;
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
+}
+
+.feed-text {
+  margin: 0;
+  font-size: 14px;
+}
+
+.load-more {
+  margin: 0 0 12px;
+}
+
 .panel input {
   width: 70%;
   padding: 8px 10px;
@@ -72,8 +88,12 @@ main { padding: 24px; }
   transition: transform 0.12s ease;
 }
 
-.panel button:hover { transform: scale(1.03); }
-.panel button:active { transform: scale(0.97); }
+.panel button:hover:not(:disabled) { transform: scale(1.03); }
+.panel button:active:not(:disabled) { transform: scale(0.97); }
+.panel button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 .notice {
   margin: 8px 0 0;
