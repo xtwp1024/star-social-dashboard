@@ -16,19 +16,43 @@
 
 /**
  * Mock 适配器：内存存储 + 游标分页，模拟真实后端行为。
- * @param {{ seedPosts?: Array<{text: string, author?: string}>, latencyMs?: number }} [options]
+ * @param {{
+ *   seedPosts?: Array<{text: string, author?: string}>,
+ *   latencyMs?: number,
+ *   snapshot?: { posts: Array<{id: string, text: string, author?: string, createdAt: string}>, nextId: number },
+ * }} [options]
+ * snapshot 用于持久化恢复：由 createPersistedMockAdapter 传入，结构非法时忽略。
  */
-export function createMockAdapter({ seedPosts = [], latencyMs = 0 } = {}) {
+export function createMockAdapter({ seedPosts = [], latencyMs = 0, snapshot = null } = {}) {
   let nextId = 0;
   const clock = () => new Date().toISOString();
 
+  const isValidSnapshot = snapshot !== null &&
+    typeof snapshot === 'object' &&
+    Number.isInteger(snapshot.nextId) && snapshot.nextId > 0 &&
+    Array.isArray(snapshot.posts) &&
+    snapshot.posts.every(
+      (p) => p !== null && typeof p === 'object' &&
+        typeof p.id === 'string' && p.id.length > 0 &&
+        typeof p.text === 'string'
+    );
+
   /** @type {Array<{id: string, text: string, author: string, createdAt: string}>} */
-  const store = seedPosts.map((p) => ({
-    id: `p${++nextId}`,
-    text: p.text,
-    author: p.author ?? '匿名星友',
-    createdAt: clock(),
-  }));
+  const store = isValidSnapshot
+    ? snapshot.posts.map((p) => ({
+        id: p.id,
+        text: p.text,
+        author: typeof p.author === 'string' && p.author.length > 0 ? p.author : '匿名星友',
+        createdAt: typeof p.createdAt === 'string' && p.createdAt.length > 0 ? p.createdAt : clock(),
+      }))
+    : seedPosts.map((p) => ({
+        id: `p${++nextId}`,
+        text: p.text,
+        author: p.author ?? '匿名星友',
+        createdAt: clock(),
+      }));
+
+  if (isValidSnapshot) nextId = snapshot.nextId;
 
   const delay = () =>
     latencyMs > 0 ? new Promise((r) => setTimeout(r, latencyMs)) : Promise.resolve();
@@ -58,6 +82,11 @@ export function createMockAdapter({ seedPosts = [], latencyMs = 0 } = {}) {
     /** 仅供测试：当前存储条数 */
     __size() {
       return store.length;
+    },
+
+    /** 供持久化层导出完整快照（深拷贝，防止外部篡改内部 store） */
+    __snapshot() {
+      return { posts: store.map((p) => ({ ...p })), nextId };
     },
   };
 }

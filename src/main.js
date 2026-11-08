@@ -2,6 +2,7 @@ import { createEl, clearChildren } from './security/dom.js';
 import { validateMessage } from './security/validate.js';
 import { createListenerTracker } from './security/listeners.js';
 import { createFeedApi, createMockAdapter } from './data/api.js';
+import { createPersistedMockAdapter } from './data/persist.js';
 
 /**
  * 星社仪表盘入口。
@@ -13,15 +14,30 @@ import { createFeedApi, createMockAdapter } from './data/api.js';
 /** @type {ReturnType<typeof createListenerTracker> | null} */
 let pageTracker = null;
 
-/** 深化阶段（数据源项）当前使用 Mock 适配器，真实后端就绪后替换此行即可 */
+/** localStorage 可用性探测（隐私模式/被禁用时访问即抛错），不可用返回 null */
+function getStorage() {
+  try {
+    const s = globalThis.localStorage;
+    s.setItem('__star_probe__', '1');
+    s.removeItem('__star_probe__');
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+const seedPosts = [
+  { text: '星社仪表盘已接入数据层，这条来自 Mock 适配器。', author: '星社机器人' },
+  { text: '分页采用游标模式，点击「加载更多」拉取下一页。', author: '星社机器人' },
+];
+const mockOptions = { seedPosts, latencyMs: 120 };
+
+/** 深化阶段（数据源项）：localStorage 可用时带持久化（刷新不丢帖），否则退回纯内存 Mock */
+const storage = getStorage();
 const api = createFeedApi({
-  adapter: createMockAdapter({
-    seedPosts: [
-      { text: '星社仪表盘已接入数据层，这条来自 Mock 适配器。', author: '星社机器人' },
-      { text: '分页采用游标模式，点击「加载更多」拉取下一页。', author: '星社机器人' },
-    ],
-    latencyMs: 120,
-  }),
+  adapter: storage
+    ? createPersistedMockAdapter({ storage, ...mockOptions })
+    : createMockAdapter(mockOptions),
 });
 
 /** 分页游标状态 */
