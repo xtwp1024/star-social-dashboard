@@ -90,7 +90,7 @@ function clearEmptyState(feed) {
 
 function renderEmptyState(feed) {
   if (feed.querySelector('.feed-empty:not(.leaving)')) return;
-  feed.appendChild(createEl('li', { class: 'feed-empty' }, '暂无内容，来发第一条吧'));
+  feed.appendChild(createEl('li', { class: 'feed-empty', role: 'status' }, '暂无内容，来发第一条吧'));
 }
 
 function clearErrorState(feed) {
@@ -105,7 +105,7 @@ function clearErrorState(feed) {
 function renderErrorState(feed, tracker, retry) {
   if (feed.querySelector('.feed-error:not(.leaving)')) return;
   const item = createEl('li', { class: 'feed-error' });
-  item.appendChild(createEl('span', { class: 'feed-error-text' }, '加载失败，网络或数据源异常'));
+  item.appendChild(createEl('span', { class: 'feed-error-text', role: 'alert' }, '加载失败，网络或数据源异常'));
   const retryBtn = createEl('button', { type: 'button', class: 'feed-retry' }, '重试');
   tracker.add(retryBtn, 'click', () => {
     clearErrorState(feed);

@@ -125,6 +125,13 @@ main { padding: 24px; }
   cursor: not-allowed;
 }
 
+/* 键盘可达性：Tab 聚焦时显示清晰的强调色焦点环（鼠标点击不触发） */
+.panel input:focus-visible,
+.panel button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* 出现动画：面板、帖子、提示、空态/错误态统一淡入上移 */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(6px); }
