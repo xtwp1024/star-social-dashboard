@@ -143,6 +143,14 @@ main { padding: 24px; }
 /* 加载更多按钮出现/隐藏平滑过渡（hidden 属性由 JS 切换） */
 .load-more { transition: opacity 0.18s ease; }
 
+/* 消失动画：与 rise-in 对称的淡出下沉；JS 给节点加 leaving 类，animationend 后移除 */
+@keyframes sink-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+.leaving { animation: sink-out 0.18s ease-in both; }
+
 .notice {
   margin: 8px 0 0;
   color: var(--danger);

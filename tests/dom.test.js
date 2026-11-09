@@ -85,3 +85,61 @@ test('clearChildren 清空容器', async () => {
   assert.equal(box.children.length, 0);
   assert.equal(box.firstChild, null);
 });
+
+// removeAnimated 专用桩：带 classList / dataset / isConnected / 事件捕获 / remove
+function makeAnimStub() {
+  const el = {
+    isConnected: true,
+    removed: false,
+    dataset: {},
+    classList: { add(c) { (el.classes ??= new Set()).add(c); } },
+    handlers: new Map(),
+    addEventListener(type, handler) {
+      if (!el.handlers.has(type)) el.handlers.set(type, []);
+      el.handlers.get(type).push(handler);
+    },
+    remove() { el.removed = true; el.isConnected = false; },
+    fire(type) {
+      for (const h of el.handlers.get(type) ?? []) h({});
+      el.handlers.set(type, []);
+    },
+  };
+  return el;
+}
+
+test('removeAnimated 加 leaving 类，animationend 后移除节点', async () => {
+  const { removeAnimated } = await import('../src/security/dom.js');
+  const el = makeAnimStub();
+  removeAnimated(el);
+  assert.ok(el.classes.has('leaving'));
+  assert.equal(el.dataset.leaving, '1');
+  assert.equal(el.removed, false, '动画结束前不应移除');
+  el.fire('animationend');
+  assert.equal(el.removed, true);
+});
+
+test('removeAnimated 超时兜底：animationend 不触发也会移除', async () => {
+  const { removeAnimated } = await import('../src/security/dom.js');
+  const el = makeAnimStub();
+  removeAnimated(el, { duration: 10 });
+  await new Promise((r) => setTimeout(r, 150));
+  assert.equal(el.removed, true, '最迟 duration+100ms 内必须移除');
+});
+
+test('removeAnimated 重复调用防抖：第二次不再注册监听器', async () => {
+  const { removeAnimated } = await import('../src/security/dom.js');
+  const el = makeAnimStub();
+  removeAnimated(el);
+  const countBefore = el.handlers.get('animationend').length;
+  removeAnimated(el);
+  assert.equal(el.handlers.get('animationend').length, countBefore);
+});
+
+test('removeAnimated 已断连节点直接返回', async () => {
+  const { removeAnimated } = await import('../src/security/dom.js');
+  const el = makeAnimStub();
+  el.isConnected = false;
+  removeAnimated(el);
+  assert.equal(el.removed, false);
+  assert.ok(!el.classes?.has('leaving'));
+});

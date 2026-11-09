@@ -1,4 +1,4 @@
-import { createEl, clearChildren } from './security/dom.js';
+import { createEl, clearChildren, removeAnimated } from './security/dom.js';
 import { validateMessage } from './security/validate.js';
 import { createListenerTracker } from './security/listeners.js';
 import { createFeedApi, createMockAdapter } from './data/api.js';
@@ -78,22 +78,24 @@ function renderNotice(panel, text) {
 
 function clearNotice(panel) {
   const n = panel.querySelector('#notice');
-  if (n) n.remove();
+  if (!n) return;
+  n.removeAttribute('id'); // 动画淡出期间避免与新 notice 的 id 重复
+  removeAnimated(n);
 }
 
 function clearEmptyState(feed) {
-  const e = feed.querySelector('.feed-empty');
-  if (e) e.remove();
+  const e = feed.querySelector('.feed-empty:not(.leaving)');
+  if (e) removeAnimated(e);
 }
 
 function renderEmptyState(feed) {
-  if (feed.querySelector('.feed-empty')) return;
+  if (feed.querySelector('.feed-empty:not(.leaving)')) return;
   feed.appendChild(createEl('li', { class: 'feed-empty' }, '暂无内容，来发第一条吧'));
 }
 
 function clearErrorState(feed) {
-  const e = feed.querySelector('.feed-error');
-  if (e) e.remove();
+  const e = feed.querySelector('.feed-error:not(.leaving)');
+  if (e) removeAnimated(e);
 }
 
 /**
@@ -101,7 +103,7 @@ function clearErrorState(feed) {
  * 重试按钮监听器同样经 tracker 登记，保持「所有监听器统一登记」的约定。
  */
 function renderErrorState(feed, tracker, retry) {
-  if (feed.querySelector('.feed-error')) return;
+  if (feed.querySelector('.feed-error:not(.leaving)')) return;
   const item = createEl('li', { class: 'feed-error' });
   item.appendChild(createEl('span', { class: 'feed-error-text' }, '加载失败，网络或数据源异常'));
   const retryBtn = createEl('button', { type: 'button', class: 'feed-retry' }, '重试');
