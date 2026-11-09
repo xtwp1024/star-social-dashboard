@@ -125,8 +125,37 @@ main { padding: 24px; }
   cursor: not-allowed;
 }
 
+/* 出现动画：面板、帖子、提示、空态/错误态统一淡入上移 */
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel { animation: rise-in 0.24s ease-out both; }
+
+.feed-item { animation: rise-in 0.2s ease-out both; }
+
+.notice { animation: rise-in 0.18s ease-out both; }
+
+.feed-empty,
+.feed-error { animation: rise-in 0.18s ease-out both; }
+
+/* 加载更多按钮出现/隐藏平滑过渡（hidden 属性由 JS 切换） */
+.load-more { transition: opacity 0.18s ease; }
+
 .notice {
   margin: 8px 0 0;
   color: var(--danger);
   font-size: 13px;
+}
+
+/* 无障碍：用户偏好减少动态效果时关闭全部动画与过渡 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
