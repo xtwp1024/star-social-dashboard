@@ -3,6 +3,7 @@ import { validateMessage } from './security/validate.js';
 import { createListenerTracker } from './security/listeners.js';
 import { createFeedApi, createMockAdapter } from './data/api.js';
 import { createPersistedMockAdapter } from './data/persist.js';
+import { charCountState } from './ui/charcount.js';
 
 /**
  * 星社仪表盘入口。
@@ -177,6 +178,24 @@ function bootstrap() {
   });
   const btn = createEl('button', { type: 'button' }, '发送');
 
+  // 字数计数：与 maxlength 同口径，接近上限红色预警；
+  // aria-live 仅在进入预警态时启用，避免正常打字时屏幕阅读器逐键播报
+  const charCount = createEl('span', { class: 'char-count' });
+  const updateCharCount = () => {
+    const s = charCountState(input.value, 500);
+    charCount.textContent = s.text;
+    charCount.classList.toggle('char-count-warn', s.warn);
+    if (s.warn) charCount.setAttribute('aria-live', 'polite');
+    else charCount.removeAttribute('aria-live');
+  };
+  updateCharCount();
+  pageTracker.add(input, 'input', updateCharCount);
+
+  // Enter 直接发送（Shift+Enter 不拦截，为将来多行输入留余地）
+  pageTracker.add(input, 'keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !btn.disabled) btn.click();
+  });
+
   pageTracker.add(btn, 'click', async () => {
     const result = validateMessage(input.value);
     if (!result.ok) {
@@ -188,6 +207,7 @@ function bootstrap() {
       const post = await api.postMessage({ text: result.value });
       clearNotice(panel);
       input.value = '';
+      updateCharCount(); // 发送成功清空后同步计数
       clearEmptyState(feed);
       renderPost(feed, post, true);
     } catch {
@@ -199,8 +219,11 @@ function bootstrap() {
 
   panel.appendChild(feed);
   panel.appendChild(loadMoreBtn);
-  panel.appendChild(input);
-  panel.appendChild(btn);
+  const composer = createEl('div', { class: 'composer' });
+  composer.appendChild(input);
+  composer.appendChild(charCount);
+  composer.appendChild(btn);
+  panel.appendChild(composer);
   app.appendChild(panel);
 
   // 首屏数据

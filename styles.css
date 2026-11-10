@@ -99,15 +99,31 @@ main { padding: 24px; }
 }
 
 .panel input {
-  width: 70%;
   padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   font-size: 14px;
 }
 
+/* 发送区：输入框 + 字数计数 + 发送按钮 */
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.composer input { flex: 1; min-width: 0; }
+
+.char-count {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* 接近上限预警：红色（特殊用途色） */
+.char-count-warn { color: var(--danger); font-weight: 600; }
+
 .panel button {
-  margin-left: 8px;
   padding: 8px 16px;
   background: var(--accent);
   color: #fff;
@@ -175,15 +191,16 @@ main { padding: 24px; }
   }
 }
 
-/* 移动端适配：小屏收紧留白，输入框与发送按钮改纵向堆叠避免溢出 */
+/* 移动端适配：小屏收紧留白，发送区改纵向堆叠（输入框/计数/按钮）避免溢出 */
 @media (max-width: 600px) {
   .topbar { padding: 12px 16px; gap: 8px; }
   main { padding: 16px; }
   .panel { padding: 12px; }
 
-  .panel input { width: 100%; }
-  .panel button { margin-left: 0; }
-  .panel > button:not(.load-more) { width: 100%; margin-top: 8px; }
+  .composer { flex-direction: column; align-items: stretch; }
+  .composer input { width: 100%; }
+  .char-count { align-self: flex-end; margin-top: 4px; }
+  .composer button { width: 100%; margin-top: 8px; }
 
   /* 错误态一行放不下文本 + 重试按钮时允许换行 */
   .feed-error { flex-wrap: wrap; }
