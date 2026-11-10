@@ -174,3 +174,17 @@ main { padding: 24px; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 移动端适配：小屏收紧留白，输入框与发送按钮改纵向堆叠避免溢出 */
+@media (max-width: 600px) {
+  .topbar { padding: 12px 16px; gap: 8px; }
+  main { padding: 16px; }
+  .panel { padding: 12px; }
+
+  .panel input { width: 100%; }
+  .panel button { margin-left: 0; }
+  .panel > button:not(.load-more) { width: 100%; margin-top: 8px; }
+
+  /* 错误态一行放不下文本 + 重试按钮时允许换行 */
+  .feed-error { flex-wrap: wrap; }
+}
