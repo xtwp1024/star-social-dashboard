@@ -3,6 +3,8 @@
  * 原则：白名单校验 + 长度上限 + 控制字符剥离，拒绝先于清洗。
  */
 
+// 该正则的目的就是精确匹配控制字符以便剥离，no-control-regex 在此为误报。
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 
 /**

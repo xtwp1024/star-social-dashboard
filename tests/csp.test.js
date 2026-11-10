@@ -17,6 +17,7 @@ function parseMetaCsp() {
 
 /** 取某指令（如 connect-src）的值 */
 function directive(csp, name) {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- name 为测试内部传入的指令名常量
   const m = csp.match(new RegExp(`(?:^|;)\\s*${name}\\s+([^;]+)`, 'i'));
   return m ? m[1].trim() : null;
 }
@@ -41,6 +42,7 @@ test('connect-src 白名单不含通配符与宽松来源', () => {
     assert.ok(!value.includes(bad), `connect-src 不应包含 ${bad}`);
   }
   for (const token of value.split(' ')) {
+    // eslint-disable-next-line security/detect-possible-timing-attacks -- 比较对象是字面量标记，非机密值
     if (token === "'self'") continue;
     assert.match(token, /^https?:\/\//, `白名单项 ${token} 必须是精确 origin`);
   }

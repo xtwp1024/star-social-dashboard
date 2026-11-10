@@ -74,6 +74,7 @@ export function createListenerTracker() {
       const n = registry.length;
       // 倒序移除，避免 splice 干扰
       for (let i = registry.length - 1; i >= 0; i--) {
+        // eslint-disable-next-line security/detect-object-injection -- i 为受控循环下标，非外部输入
         const entry = registry[i];
         if (typeof entry.target.removeEventListener === 'function') {
           entry.target.removeEventListener(entry.type, entry.handler, entry.options);

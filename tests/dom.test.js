@@ -10,6 +10,7 @@ function makeStub() {
       textContent: '',
       children: [],
       firstChild: null,
+      // eslint-disable-next-line security/detect-object-injection -- k 为测试用例自造的属性名，非外部输入
       setAttribute(k, v) { this.attrs[k] = String(v); },
       appendChild(c) { this.children.push(c); this.firstChild = this.children[0]; },
       removeChild(c) {

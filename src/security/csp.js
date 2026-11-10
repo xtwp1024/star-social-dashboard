@@ -14,6 +14,8 @@
 export const API_ORIGINS = [];
 
 /** origin 格式白名单：仅 http(s) 绝对 origin，主机名为字母数字点横线，可选端口。 */
+// 嵌套量词受首尾字符类约束且整体锚定，回溯线性，ReDoS 风险不成立，安全插件误报。
+// eslint-disable-next-line security/detect-unsafe-regex
 const ORIGIN_RE = /^https?:\/\/[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?(:\d{1,5})?$/;
 
 /**

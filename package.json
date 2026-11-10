@@ -9,9 +9,13 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test",
-    "verify": "npm test && vite build && node scripts/verify-csp.js && npm audit --audit-level=moderate"
+    "lint": "eslint src tests scripts",
+    "verify": "npm run lint && npm test && vite build && node scripts/verify-csp.js && npm audit --audit-level=moderate"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
+    "eslint-plugin-security": "^4.2.1",
+    "globals": "^17.14.0",
     "vite": "^6.4.5"
   }
 }

@@ -1,4 +1,4 @@
-import { createEl, clearChildren, removeAnimated } from './security/dom.js';
+import { createEl, removeAnimated } from './security/dom.js';
 import { validateMessage } from './security/validate.js';
 import { createListenerTracker } from './security/listeners.js';
 import { createFeedApi, createMockAdapter } from './data/api.js';
