@@ -4,6 +4,7 @@ import { createListenerTracker } from './security/listeners.js';
 import { createFeedApi, createMockAdapter } from './data/api.js';
 import { createPersistedMockAdapter } from './data/persist.js';
 import { charCountState } from './ui/charcount.js';
+import { formatRelativeTime } from './ui/timeago.js';
 
 /**
  * 星社仪表盘入口。
@@ -52,6 +53,11 @@ function formatTime(iso) {
   }
 }
 
+/** 优先相对时间（刚刚/N 分钟前/…），超过 7 天或解析失败回退绝对时间 */
+function formatPostTime(iso) {
+  return formatRelativeTime(iso) ?? formatTime(iso);
+}
+
 /**
  * 渲染一条帖子（textContent 安全渲染）。
  * @param {HTMLElement} feed
@@ -60,9 +66,9 @@ function formatTime(iso) {
  */
 function renderPost(feed, post, prepend = false) {
   const item = createEl('li', { class: 'feed-item' });
-  item.appendChild(
-    createEl('span', { class: 'feed-meta' }, `${post.author} · ${formatTime(post.createdAt)}`)
-  );
+  const meta = createEl('span', { class: 'feed-meta' }, `${post.author} · `);
+  meta.appendChild(createEl('time', { datetime: post.createdAt }, formatPostTime(post.createdAt)));
+  item.appendChild(meta);
   item.appendChild(createEl('p', { class: 'feed-text' }, post.text));
   if (prepend && feed.firstChild) {
     feed.insertBefore(item, feed.firstChild);

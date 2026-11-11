@@ -20,7 +20,7 @@ export function createEl(tag, attrs = {}, text = '') {
   const el = document.createElement(tag);
   const ALLOWED_ATTRS = new Set([
     'class', 'id', 'href', 'src', 'alt', 'title', 'type', 'name',
-    'placeholder', 'value', 'disabled', 'hidden', 'role', 'data-id',
+    'placeholder', 'value', 'disabled', 'hidden', 'role', 'data-id', 'datetime',
   ]);
   for (const [key, value] of Object.entries(attrs)) {
     if (!ALLOWED_ATTRS.has(key)) continue;
