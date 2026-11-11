@@ -78,9 +78,35 @@ function renderPost(feed, post, prepend = false) {
   return item;
 }
 
-function renderNotice(panel, text) {
+/**
+ * 渲染顶部提示。error 用 role=alert 立即播报；success 用 role=status 温和播报。
+ */
+function renderNotice(panel, text, tone = 'error') {
   clearNotice(panel);
-  panel.appendChild(createEl('p', { class: 'notice', id: 'notice', role: 'alert' }, text));
+  panel.appendChild(createEl('p', {
+    class: `notice notice-${tone}`,
+    id: 'notice',
+    role: tone === 'error' ? 'alert' : 'status',
+  }, text));
+}
+
+/** 成功提示自动消失的定时器（模块级单例，重复发送前先清旧，避免旧定时器误清新提示） */
+let successNoticeTimer = null;
+
+/**
+ * 发送成功反馈：短暂显示「已发送」后自动淡出（走 removeAnimated 消失动画）。
+ * 定时器回调里校验当前 notice 仍是成功态才清除——期间若被错误提示替换则不误删。
+ */
+function renderSuccessNotice(panel) {
+  renderNotice(panel, '已发送', 'success');
+  if (successNoticeTimer) clearTimeout(successNoticeTimer);
+  successNoticeTimer = setTimeout(() => {
+    successNoticeTimer = null;
+    const current = panel.querySelector('#notice');
+    if (current && current.classList.contains('notice-success')) {
+      clearNotice(panel);
+    }
+  }, 2000);
 }
 
 function clearNotice(panel) {
@@ -211,11 +237,12 @@ function bootstrap() {
     btn.disabled = true; // 防重复提交
     try {
       const post = await api.postMessage({ text: result.value });
-      clearNotice(panel);
       input.value = '';
       updateCharCount(); // 发送成功清空后同步计数
       clearEmptyState(feed);
       renderPost(feed, post, true);
+      renderSuccessNotice(panel);
+      input.focus(); // 连续输入体验：发送后光标回到输入框
     } catch {
       renderNotice(panel, '发送失败，请重试');
     } finally {

@@ -196,6 +196,9 @@ main { padding: 24px; }
   font-size: 13px;
 }
 
+/* 成功提示：强调色（蓝），与错误红色区分；复用 rise-in/sink-out 出现/消失动画 */
+.notice-success { color: var(--accent); }
+
 /* 无障碍：用户偏好减少动态效果时关闭全部动画与过渡 */
 @media (prefers-reduced-motion: reduce) {
   *,
