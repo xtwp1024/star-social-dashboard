@@ -5,6 +5,7 @@ import { createFeedApi, createMockAdapter } from './data/api.js';
 import { createPersistedMockAdapter } from './data/persist.js';
 import { charCountState } from './ui/charcount.js';
 import { formatRelativeTime } from './ui/timeago.js';
+import { createTimeRefresher } from './ui/timerefresh.js';
 
 /**
  * 星社仪表盘入口。
@@ -15,6 +16,9 @@ import { formatRelativeTime } from './ui/timeago.js';
 
 /** @type {ReturnType<typeof createListenerTracker> | null} */
 let pageTracker = null;
+
+/** 相对时间周期刷新器（bootstrap 创建，页面卸载时停止） */
+let timeRefresher = null;
 
 /** localStorage 可用性探测（隐私模式/被禁用时访问即抛错），不可用返回 null */
 function getStorage() {
@@ -259,6 +263,14 @@ function bootstrap() {
   panel.appendChild(composer);
   app.appendChild(panel);
 
+  // 相对时间周期刷新：页面长开时「刚刚」等文案会陈旧。
+  // 定时刷新走可见性门控；回到前台由 visibilitychange 立即补偿（监听器经 tracker 登记）。
+  timeRefresher = createTimeRefresher(feed, { fallback: formatTime });
+  pageTracker.add(document, 'visibilitychange', () => {
+    if (document.visibilityState === 'visible') timeRefresher?.tick();
+  });
+  timeRefresher.start();
+
   // 首屏数据
   loadPage(api, feed, panel, loadMoreBtn, pageTracker);
 }
@@ -269,7 +281,8 @@ if (document.readyState === 'loading') {
   bootstrap();
 }
 
-// 页面卸载时统一解除所有监听器，防止 detached 节点泄漏
+// 页面卸载时统一解除所有监听器并停止定时器，防止 detached 节点泄漏
 window.addEventListener('pagehide', () => {
+  timeRefresher?.stop();
   pageTracker?.removeAll();
 }, { once: true });
