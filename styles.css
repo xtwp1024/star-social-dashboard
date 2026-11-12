@@ -254,3 +254,34 @@ main { padding: 24px; }
   /* 错误态一行放不下文本 + 重试按钮时允许换行 */
   .feed-error { flex-wrap: wrap; }
 }
+
+/* 回到顶部：长 feed 滚过一屏后出现（fixed 定位不随内容滚动）。
+   出现 rise-in / 消失 sink-out，动画结束由 JS 置 hidden（键盘/读屏不落进隐藏按钮） */
+.back-to-top {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(17, 24, 39, 0.12);
+  transition: transform 0.15s ease;
+}
+.back-to-top:hover { transform: scale(1.03); }
+.back-to-top:active { transform: scale(0.97); }
+.back-to-top:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.back-to-top.btt-in { animation: rise-in 0.2s ease-out both; }
+.back-to-top.btt-leaving { animation: sink-out 0.18s ease-in both; }
+
+/* 移动端：按钮贴边更近，避免遮挡发送区 */
+@media (max-width: 600px) {
+  .back-to-top { right: 12px; bottom: 12px; }
+}

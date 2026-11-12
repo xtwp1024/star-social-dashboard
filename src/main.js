@@ -7,6 +7,7 @@ import { charCountState } from './ui/charcount.js';
 import { formatRelativeTime } from './ui/timeago.js';
 import { createTimeRefresher } from './ui/timerefresh.js';
 import { createInfiniteScroll } from './ui/infinite-scroll.js';
+import { createBackToTop } from './ui/backtotop.js';
 import { createSkeletonItems } from './ui/skeleton.js';
 
 /**
@@ -24,6 +25,9 @@ let timeRefresher = null;
 
 /** 无限滚动观察器（bootstrap 创建，页面卸载时断开） */
 let autoLoader = null;
+
+/** 回到顶部控制器（bootstrap 创建，页面卸载时销毁：解除 scroll 监听 + 清定时器） */
+let backToTopCtl = null;
 
 /** localStorage 可用性探测（隐私模式/被禁用时访问即抛错），不可用返回 null */
 function getStorage() {
@@ -295,6 +299,18 @@ function bootstrap() {
   panel.appendChild(composer);
   app.appendChild(panel);
 
+  // 回到顶部：长 feed（无限滚动）滚过一屏后出现，点击平滑滚回顶部并把焦点交还输入框。
+  // 可见性与动画类由 createBackToTop 全权管理（hidden 切换保证键盘/读屏不落进隐藏按钮）
+  const backToTopBtn = createEl('button', { type: 'button', class: 'back-to-top', title: '回到顶部' }, '回到顶部');
+  pageTracker.add(backToTopBtn, 'click', () => {
+    const reduced = typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+    input.focus({ preventScroll: true });
+  });
+  backToTopCtl = createBackToTop(backToTopBtn, { threshold: 400 });
+  app.appendChild(backToTopBtn);
+
   // 相对时间周期刷新：页面长开时「刚刚」等文案会陈旧。
   // 定时刷新走可见性门控；回到前台由 visibilitychange 立即补偿（监听器经 tracker 登记）。
   timeRefresher = createTimeRefresher(feed, { fallback: formatTime });
@@ -317,5 +333,6 @@ if (document.readyState === 'loading') {
 window.addEventListener('pagehide', () => {
   timeRefresher?.stop();
   autoLoader?.disconnect();
+  backToTopCtl?.destroy();
   pageTracker?.removeAll();
 }, { once: true });
