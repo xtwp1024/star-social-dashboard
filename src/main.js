@@ -6,6 +6,7 @@ import { createPersistedMockAdapter } from './data/persist.js';
 import { charCountState } from './ui/charcount.js';
 import { formatRelativeTime } from './ui/timeago.js';
 import { createTimeRefresher } from './ui/timerefresh.js';
+import { createInfiniteScroll } from './ui/infinite-scroll.js';
 
 /**
  * 星社仪表盘入口。
@@ -19,6 +20,9 @@ let pageTracker = null;
 
 /** 相对时间周期刷新器（bootstrap 创建，页面卸载时停止） */
 let timeRefresher = null;
+
+/** 无限滚动观察器（bootstrap 创建，页面卸载时断开） */
+let autoLoader = null;
 
 /** localStorage 可用性探测（隐私模式/被禁用时访问即抛错），不可用返回 null */
 function getStorage() {
@@ -154,14 +158,10 @@ function renderErrorState(feed, tracker, retry) {
 
 /**
  * 拉取一页帖子并渲染。出错时展示 notice，不静默吞掉。
- * @param {ReturnType<typeof createFeedApi>} api
- * @param {HTMLElement} feed
- * @param {HTMLElement} panel
- * @param {HTMLButtonElement} loadMoreBtn
- * @param {ReturnType<typeof createListenerTracker>} tracker
+ * @returns {Promise<boolean>} 本页是否加载成功（供无限滚动判断是否继续连续补页）
  */
 async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
-  if (feedState.loading || !feedState.hasMore) return;
+  if (feedState.loading || !feedState.hasMore) return false;
   feedState.loading = true;
   loadMoreBtn.disabled = true;
   loadMoreBtn.textContent = '加载中…';
@@ -176,6 +176,7 @@ async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
       renderEmptyState(feed);
     }
     clearNotice(panel);
+    return true;
   } catch {
     // 列表已有内容（翻页失败）→ 顶部 notice 提示即可，保留已渲染数据；
     // 列表为空（首屏失败）→ 列表区错误态 + 重试按钮，避免用户面对空白无反馈
@@ -184,6 +185,7 @@ async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
     } else {
       renderNotice(panel, '加载失败，请稍后重试');
     }
+    return false;
   } finally {
     feedState.loading = false;
     loadMoreBtn.disabled = false;
@@ -205,9 +207,15 @@ function bootstrap() {
   const feed = createEl('ul', { class: 'feed', id: 'feed' });
   const loadMoreBtn = createEl('button', { type: 'button', class: 'load-more' }, '加载更多');
   loadMoreBtn.hidden = true;
-  pageTracker.add(loadMoreBtn, 'click', () => {
-    loadPage(api, feed, panel, loadMoreBtn, pageTracker);
-  });
+
+  // 无限滚动：按钮进入视口自动加载（渐进增强，不支持 IO 时点击按钮兜底）。
+  // 加载成功且按钮仍在视口内则连续补页；失败路径不 recheck，防止错误风暴。
+  const loadMore = async () => {
+    const ok = await loadPage(api, feed, panel, loadMoreBtn, pageTracker);
+    if (ok) autoLoader?.recheck();
+  };
+  pageTracker.add(loadMoreBtn, 'click', loadMore);
+  autoLoader = createInfiniteScroll(loadMoreBtn, { onVisible: () => { loadMore(); } });
 
   const input = createEl('input', {
     type: 'text', name: 'message', placeholder: '输入消息（试试 <img onerror> 这类载荷）', maxlength: '500',
@@ -281,8 +289,9 @@ if (document.readyState === 'loading') {
   bootstrap();
 }
 
-// 页面卸载时统一解除所有监听器并停止定时器，防止 detached 节点泄漏
+// 页面卸载时统一解除所有监听器并停止定时器/观察器，防止 detached 节点泄漏
 window.addEventListener('pagehide', () => {
   timeRefresher?.stop();
+  autoLoader?.disconnect();
   pageTracker?.removeAll();
 }, { once: true });
