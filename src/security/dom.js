@@ -21,6 +21,8 @@ export function createEl(tag, attrs = {}, text = '') {
   const ALLOWED_ATTRS = new Set([
     'class', 'id', 'href', 'src', 'alt', 'title', 'type', 'name',
     'placeholder', 'value', 'disabled', 'hidden', 'role', 'data-id', 'datetime',
+    // aria-hidden：装饰性占位元素（骨架屏等）对屏幕阅读器隐藏；固定字符串值，无注入面
+    'aria-hidden',
   ]);
   for (const [key, value] of Object.entries(attrs)) {
     if (!ALLOWED_ATTRS.has(key)) continue;

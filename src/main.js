@@ -7,6 +7,7 @@ import { charCountState } from './ui/charcount.js';
 import { formatRelativeTime } from './ui/timeago.js';
 import { createTimeRefresher } from './ui/timerefresh.js';
 import { createInfiniteScroll } from './ui/infinite-scroll.js';
+import { createSkeletonItems } from './ui/skeleton.js';
 
 /**
  * 星社仪表盘入口。
@@ -157,6 +158,20 @@ function renderErrorState(feed, tracker, retry) {
 }
 
 /**
+ * 首屏加载骨架屏：列表尚无内容时渲染占位条（aria-hidden 装饰性元素），
+ * 请求结束（成功/失败）后在 finally 中统一淡出移除。
+ */
+function renderSkeleton(feed) {
+  if (feed.querySelector('.feed-skeleton:not(.leaving)')) return;
+  for (const item of createSkeletonItems(3)) feed.appendChild(item);
+}
+
+function clearSkeleton(feed) {
+  // forEach 回调会多传 index/array 参数，包一层确保 removeAnimated 只拿到节点
+  feed.querySelectorAll('.feed-skeleton:not(.leaving)').forEach((el) => removeAnimated(el));
+}
+
+/**
  * 拉取一页帖子并渲染。出错时展示 notice，不静默吞掉。
  * @returns {Promise<boolean>} 本页是否加载成功（供无限滚动判断是否继续连续补页）
  */
@@ -165,6 +180,14 @@ async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
   feedState.loading = true;
   loadMoreBtn.disabled = true;
   loadMoreBtn.textContent = '加载中…';
+  // 首屏（列表无内容）先渲染骨架占位；翻页时列表已有内容，仅按钮显示加载中
+  if (
+    feed.querySelectorAll('.feed-item').length === 0
+    && !feed.querySelector('.feed-error:not(.leaving)')
+    && !feed.querySelector('.feed-empty:not(.leaving)')
+  ) {
+    renderSkeleton(feed);
+  }
   try {
     const page = await api.fetchPosts({ limit: 10, cursor: feedState.nextCursor });
     clearEmptyState(feed);
@@ -191,6 +214,7 @@ async function loadPage(api, feed, panel, loadMoreBtn, tracker) {
     loadMoreBtn.disabled = false;
     loadMoreBtn.textContent = '加载更多';
     loadMoreBtn.hidden = !feedState.hasMore;
+    clearSkeleton(feed); // 骨架占位完成使命：成功淡出让位给真实数据，失败让位给错误态
   }
 }
 

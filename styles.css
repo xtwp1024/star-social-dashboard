@@ -199,6 +199,36 @@ main { padding: 24px; }
 /* 成功提示：强调色（蓝），与错误红色区分；复用 rise-in/sink-out 出现/消失动画 */
 .notice-success { color: var(--accent); }
 
+/* 首屏骨架屏：数据拉取期间的加载占位（aria-hidden 装饰性元素，屏幕阅读器跳过）。
+   微光扫过动画用 CSS 变量取色，深浅色模式自动适配；reduced-motion 下退化为静态条 */
+.feed-skeleton {
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  animation: rise-in 0.2s ease-out both;
+}
+
+.skel-line {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--line) 25%, var(--bg) 50%, var(--line) 75%);
+  background-size: 200% 100%;
+  animation: skel-shimmer 1.2s ease-in-out infinite;
+}
+
+.skel-meta {
+  width: 32%;
+  margin-bottom: 8px;
+  height: 10px;
+}
+
+.skel-text { width: 85%; }
+
+@keyframes skel-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
 /* 无障碍：用户偏好减少动态效果时关闭全部动画与过渡 */
 @media (prefers-reduced-motion: reduce) {
   *,
